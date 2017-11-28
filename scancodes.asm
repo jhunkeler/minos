@@ -1,0 +1,9 @@
+%ifndef _SCANCODES_ASM
+%define _SCANCODES_ASM
+
+SC_ARROW_UP equ 48h
+SC_ARROW_DOWN equ 50h
+SC_ARROW_LEFT equ 4Bh
+SC_ARROW_RIGHT equ 4Dh
+
+%endif
