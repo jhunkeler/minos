@@ -4,7 +4,7 @@ jmp start
 
 CR equ 0Dh
 LF equ 0Ah
-K_CS_ADDR equ 007eh
+K_CS_ADDR equ 07E0h
 
 start:
 	mov ax, 07c0h
@@ -67,6 +67,15 @@ start:
 	pop bp
 
 	mov dx, [drive0]	; the kernel will need the boot drive number
+
+	;cli			; disable interrupts
+	;mov ax, K_CS_ADDR	; get code segment
+	;mov ds, ax		; set data segment
+	;mov es, ax		; set extra segment
+	;mov ax, 0800h
+	;mov ss, ax		; set stack segment
+	;mov sp, 0ffffh		; set stack pointer (~64k)
+
 	jmp K_CS_ADDR:0000h	; jump to kernel address
 
 	cli			; disable interrupts

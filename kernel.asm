@@ -11,10 +11,10 @@ jmp kmain
 
 kmain:
 	cli			; disable interrupts
-	mov ax, cs		; get code segment (i.e. far jump address in bootloader)
+	mov ax, cs		; get code segment
 	mov ds, ax		; set data segment
 	mov es, ax		; set extra segment
-	mov ax, 06000h
+	mov ax, 8000h
 	mov ss, ax		; set stack segment
 	mov sp, 0ffffh		; set stack pointer (~64k)
 	sti			; enable interrupts
@@ -30,9 +30,47 @@ kmain:
 	xor si, si
 	xor bp, bp
 
+	push msg_entry_point
+	call puts
+	add sp, 2
 
+	push cs
+	call printh
+
+	mov al, ':'
+	call putc
+
+	mov ax, kmain
+	push ax
+	call printh
+	add sp, 4
+
+	mov al, CR
+	call putc
+
+	;--- stack
+
+	push msg_entry_point_stack
+	call puts
+	add sp, 2
+
+	push ss
+	call printh
+
+	mov al, ':'
+	call putc
+
+	push sp
+	call printh
+	add sp, 4
+
+	mov al, CR
+	call putc
 	push banner
 	call puts
+	add sp, 2
+
+
 
 .mainloop:
 	call kbd_read
@@ -63,15 +101,15 @@ panic:
 
 
 ; data
-kernel_address: dd 0	; format DS:ADDR
-banner: db "+========================+", CR, LF
-	db "| Welcome to MINOS 0.0.1 |", CR, LF
-	db "+========================+", CR, LF
-	db CR, LF, 0
+msg_entry_point: db 'Loaded at ', 0
+msg_entry_point_stack: db 'Stack at ', 0
+banner: db "+========================+", CR
+	db "| Welcome to MINOS 0.0.1 |", CR
+	db "+========================+", CR
+	db CR, 0
 
 ; Error messages
 error_msg_panic: db "PANIC: ", 0
-
 
 times 512 * 16 db 0
 dw 0xefbe

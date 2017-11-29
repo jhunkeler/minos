@@ -76,10 +76,10 @@ disk_read:
 ; data
 drive0: dw 0
 
-msg_disk_reset: db "Drive reset successful.", CR, LF, 0
-msg_disk_read: db "Sector read successful.", CR, LF, 0
+msg_disk_reset: db "Drive reset successful.", CR, 0
+msg_disk_read: db "Sector read successful.", CR, 0
 
-error_msg_disk_reset: db "Drive reset failed!", CR, LF, 0
-error_msg_disk_read: db "Drive read failed!", CR, LF, 0
+error_msg_disk_reset: db "Drive reset failed!", CR, 0
+error_msg_disk_read: db "Drive read failed!", CR, 0
 
 %endif ; _DISK_ASM

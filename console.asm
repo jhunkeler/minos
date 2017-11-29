@@ -136,12 +136,10 @@ console_driver:
 
 .handle_CR:
 	mov dl, 0		; set column zero
-	; fall through
 
 .handle_LF:
 	inc dh			; increment row
 	jmp .return
-
 
 .return:
 	push dx
