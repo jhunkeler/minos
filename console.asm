@@ -32,6 +32,7 @@ putc:
 
 
 console_scroll_up:
+	pusha
 	cmp dh, MAX_ROWS - 1
 	jne .no_action
 
@@ -50,12 +51,14 @@ console_scroll_up:
 	mov     dh, MAX_ROWS   ; lower row.
 	int     10h
 .no_action:
+	popa
 	ret
 
 
 console_driver:
 	push bp
 	mov bp, sp
+	pusha
 
 	call console_cursor_getpos
 	mov dh, [cursor_row]
@@ -143,9 +146,9 @@ console_driver:
 	call setcursor
 	add sp, 2
 
-
 .return_noupdate:
 	call console_scroll_up
+	popa
 	mov sp, bp
 	pop bp
 	ret

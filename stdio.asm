@@ -29,9 +29,11 @@ puts:
 printi:
 	push bp
 	mov bp, sp
+	push ax
 	mov ax, [bp + 4]
 	call putint
 .return:
+	pop ax
 	mov sp, bp
 	pop bp
 	ret
@@ -55,8 +57,8 @@ printh:
 puthex:
 	push ax
 	push bx
-	push dx
 	push cx
+	push dx
 
 	; ax is integer to print
 	ror ah, 4		; reverse hex value
@@ -91,8 +93,8 @@ puthex:
 		jne .divide
 
 .return:
-	pop cx
 	pop dx
+	pop cx
 	pop bx
 	pop ax
 	ret
@@ -141,6 +143,8 @@ printf:
 	mov bp, sp
 
 	mov di, bp		; save base pointer address
+	push di
+
 	mov bx, [bp + 4]	; format string address
 	add bp, 6		; set base pointer to beginning of '...' args
 
@@ -234,6 +238,7 @@ printf:
 					; a procedure modifies DI without restoring
 					; it, we're doomed; we'll roll right off the
 					; edge into oblivion.
+	pop di
 	mov sp, bp
 	pop bp
 	ret
