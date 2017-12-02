@@ -4,25 +4,16 @@ jmp start
 
 CR equ 0Dh
 LF equ 0Ah
-K_CS_ADDR equ 07E0h
+K_CS_ADDR equ 0080h
 
 start:
 	mov ax, 07c0h
 	mov ds, ax		; set data segment
 	mov ax, 07e0h
 	mov ss, ax		; set stack segment
-	mov sp, 2000h		; 8192k
-
-	push bp			; set up stack frame
-	mov bp, sp
-	sub sp, 2		; local storage
+	mov sp, 0200h		; 512 byte stack
 
 	mov [drive0], dl	; save first detected drive
-
-	call cls		; clear screen
-
-	push 0			;
-	call setcursor		; set cursor position
 
 	push banner		;
 	call puts		; print version
@@ -32,15 +23,16 @@ start:
 	call disk_reset
 	add sp, 2
 
-	xor cx, cx
-	mov ax, K_CS_ADDR
-	mov es, ax
-
 	push msg_loading
 	call puts
 	add sp, 2
 
-	mov bx, 0
+	; begin disk operations
+	xor cx, cx
+	mov ax, K_CS_ADDR
+	mov es, ax
+
+	mov bx, 0000h		; starting address (es:bx)
 	mov di, 2		; start at sector
 .loader:
 	mov al, 1		; read one sector
@@ -53,33 +45,21 @@ start:
 	call putc
 	add sp, 2
 
-	add bx, 200h		; increment address by 512 bytes
+	add bx, 0200h		; increment address by 512 bytes
 	inc di			; increment sector read count
-	cmp di, 16		; 8K (i'll make this smarter later)
+	cmp di, 20h		; 16K (512 * 32)
 	jle .loader		; keep reading
 
 	push msg_done
 	call puts
 	add sp, 2
 
-	add sp, 2		; remove local storage
-	mov sp, bp
-	pop bp
-
 	mov dx, [drive0]	; the kernel will need the boot drive number
-
-	;cli			; disable interrupts
-	;mov ax, K_CS_ADDR	; get code segment
-	;mov ds, ax		; set data segment
-	;mov es, ax		; set extra segment
-	;mov ax, 0800h
-	;mov ss, ax		; set stack segment
-	;mov sp, 0ffffh		; set stack pointer (~64k)
-
 	jmp K_CS_ADDR:0000h	; jump to kernel address
 
 	cli			; disable interrupts
 	jmp $			; hang
+
 
 panic:
 	; Hang system with supplied error message
@@ -100,12 +80,8 @@ panic:
 
 
 disk_reset:
-	push bp
-	mov bp, sp
-	pusha
-
 	mov ah, 00h		; reset disk
-	mov dl, [bp + 4]	; disk number
+				; dl is drive number
 	int 13h			; BIOS disk service
 	jnc .success
 
@@ -113,9 +89,6 @@ disk_reset:
 	call panic
 
 .success:
-	popa
-	mov sp, bp
-	pop bp
 	ret
 
 
@@ -152,42 +125,6 @@ disk_read:
 
 .success:
 	pop di
-	mov sp, bp
-	pop bp
-	ret
-
-
-cls:
-	push bp
-	mov bp, sp
-	pusha
-
-	mov ah, 07h		; BIOS - scroll down
-	mov al, 00h		; lines to scroll (0 == entire screen)
-	mov bx, 0700h		; color white/black
-				; & video page zero
-	mov cx, 0
-	mov dh, 24		; rows
-	mov dl, 79		; cols
-	int 10h			; BIOS video service
-	popa
-
-	mov sp, bp
-	pop bp
-	ret
-
-
-setcursor:
-	push bp
-	mov bp, sp
-	pusha
-
-	mov ah, 02h		; BIOS - set cursor position
-	mov bh, 0		; video page zero
-	mov dx, [bp + 4]	; address of new cursor value
-	int 10h			; BIOS video service
-
-	popa
 	mov sp, bp
 	pop bp
 	ret
@@ -233,7 +170,6 @@ puts:
 	ret
 
 
-
 ; data
 drive0: dw 0
 banner: db "MINOS Bootloader", CR, LF, 0
@@ -241,8 +177,6 @@ banner: db "MINOS Bootloader", CR, LF, 0
 ; General messages
 msg_loading: db "Loading", 0
 msg_done: db "done!", CR, LF, 0
-msg_disk_reset: db "Drive reset successful.", CR, LF, 0
-msg_disk_read: db "Sector read successful.", CR, LF, 0
 
 ; Error messages
 error_msg_panic: db "PANIC: ", 0
