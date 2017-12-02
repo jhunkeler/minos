@@ -75,10 +75,6 @@ kmain:
 	call puts
 	add sp, 2
 
-	; - hex test
-	push ds
-	call printh
-
 .mainloop:
 	call kbd_read
 	call putc
