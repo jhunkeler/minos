@@ -34,46 +34,21 @@ kmain:
 	push 0			; home the cursor
 	call setcursor
 
-	push msg_entry_point
-	call puts
-	add sp, 2
-
-	push cs
-	call printh
-
-	mov al, ':'
-	call putc
-
-	mov ax, kmain
-	push ax
-	call printh
-	add sp, 4
-
-	mov al, CR
-	call putc
-
-	;--- stack
-
-	push msg_entry_point_stack
-	call puts
-	add sp, 2
-
-	push ss
-	call printh
-
-	mov al, ':'
-	call putc
-
-	push sp
-	call printh
-	add sp, 4
-
-	mov al, CR
-	call putc
-
 	push banner
 	call puts
 	add sp, 2
+
+	push sp
+	push ss
+	push sp
+	push ss
+	push kmain
+	push cs
+	push kmain
+	push cs
+	push msg_test
+	call printf
+	add sp, 12
 
 .mainloop:
 	call kbd_read
@@ -110,6 +85,9 @@ banner: db "+========================+", CR
 	db "| Welcome to MINOS 0.0.1 |", CR
 	db "+========================+", CR
 	db CR, 0
+
+msg_test: db 'Kernel address:	%x:%x (%d:%d)', CR
+          db 'Stack address :	%x:%x (%d:%d)', CR, CR, 0
 
 ; Error messages
 error_msg_panic: db "PANIC: ", 0
