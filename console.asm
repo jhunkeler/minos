@@ -6,9 +6,6 @@
 %include "string.asm"
 %include "keyboard.asm"
 
-MAX_ROWS equ 25
-MAX_COLS equ 80
-
 putc:
 	; Write single character at cursor position
 	push bp
