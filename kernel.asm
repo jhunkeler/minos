@@ -7,6 +7,7 @@ jmp kmain
 %include "disk.asm"
 %include "console.asm"
 %include "stdio.asm"
+%include "terminal.asm"		; eventually will become its own "program"
 
 
 kmain:
@@ -51,8 +52,7 @@ kmain:
 	add sp, 12
 
 .mainloop:
-	call kbd_read
-	call putc
+	call terminal
 
 	jmp .mainloop
 
