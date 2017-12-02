@@ -30,6 +30,10 @@ kmain:
 	xor si, si
 	xor bp, bp
 
+	call cls		; clear console
+	push 0			; home the cursor
+	call setcursor
+
 	push msg_entry_point
 	call puts
 	add sp, 2
@@ -66,11 +70,14 @@ kmain:
 
 	mov al, CR
 	call putc
+
 	push banner
 	call puts
 	add sp, 2
 
-
+	; - hex test
+	push ds
+	call printh
 
 .mainloop:
 	call kbd_read
@@ -111,5 +118,5 @@ banner: db "+========================+", CR
 ; Error messages
 error_msg_panic: db "PANIC: ", 0
 
-times 512 * 16 db 0
+times 512 * 20h db 0
 dw 0xefbe
