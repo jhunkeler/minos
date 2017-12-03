@@ -1,6 +1,35 @@
 %ifndef _DISK_ASM
 %define _DISK_ASM
 
+%include "stdio.asm"
+
+disk_info:
+	push bp
+	mov bp, sp
+
+	xor dx, dx
+	mov ah, 41h
+	mov bx, 55aah
+	mov dl, [bp + 4]	; drive number {80h..ffh}
+	int 13h
+	jc .return
+
+	shr ax, 8
+	push dx
+	push cx
+	push ax
+	push disk_info_fmt
+	call printf
+	add sp, 6
+.return:
+	mov sp, bp
+	pop bp
+	ret
+
+
+disk_info_fmt: db 'HDD(%c): INT 13h Ext: %x (%x)', CR, 0
+
+
 disk_lba_chs:
 	push bp
 	mov bp, sp
