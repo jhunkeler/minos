@@ -13,7 +13,7 @@ start:
 	mov ss, ax		; set stack segment
 	mov sp, 0200h		; 512 byte stack
 
-	mov [drive0], dl	; save first detected drive
+	mov [drive0], dx	; save first detected drive
 
 	push banner		;
 	call puts		; print version
