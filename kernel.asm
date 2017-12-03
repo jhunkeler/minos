@@ -39,6 +39,7 @@ kmain:
 	call puts
 	add sp, 2
 
+	push word [drive0]
 	push sp
 	push ss
 	push sp
@@ -47,9 +48,19 @@ kmain:
 	push cs
 	push kmain
 	push cs
-	push msg_test
+	push msg_entry_point
 	call printf
-	add sp, 12
+	add sp, 20
+
+	mov cx, 0ffh - 80h
+	mov dx, 80h
+	.extloop:
+		push dx
+		call disk_info
+		add sp, 2
+		inc dx
+		dec cx
+		jne .extloop
 
 .mainloop:
 	call terminal
@@ -79,18 +90,18 @@ panic:
 
 
 ; data
-msg_entry_point: db 'Loaded at ', 0
-msg_entry_point_stack: db 'Stack at ', 0
 banner: db "+========================+", CR
 	db "| Welcome to MINOS 0.0.1 |", CR
 	db "+========================+", CR
 	db CR, 0
 
-msg_test: db 'Kernel address:	%x:%x (%d:%d)', CR
-          db 'Stack address :	%x:%x (%d:%d)', CR, CR, 0
+msg_entry_point: db 'Kernel address:	%x:%x (%d:%d)', CR
+                 db 'Stack address :	%x:%x (%d:%d)', CR
+                 db 'Boot device   :    %x', CR, CR, 0
 
 ; Error messages
 error_msg_panic: db "PANIC: ", 0
 
-times 512 * 20h db 0
-dw 0xefbe
+times (512 * 20h) - 2 db 0	; Until we have a file system just reserve 32k of "free space"
+dw 0xefbe			; The "BEEF" signature is a visual "end of kernel"
+				; It has no meaning...
