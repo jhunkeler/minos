@@ -182,6 +182,9 @@ printf:
 			cmp al, '%'			; '%%' - just print the character
 			je .do_percent_escape
 
+			cmp al, 'c'			; '%c' - proccess character
+			je .do_char
+
 			cmp al, 'd'			; '%d' - process integer
 			je .do_int
 
@@ -204,6 +207,11 @@ printf:
 
 			.do_percent_escape:
 				mov ax, '%'
+				call putc
+				jmp .main_string
+
+			.do_char:
+				mov ax, [bp]
 				call putc
 				jmp .main_string
 
