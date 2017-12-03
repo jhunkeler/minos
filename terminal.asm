@@ -9,15 +9,8 @@ terminal:
 
 	.clear_buffer:
 		mov cx, T_BUFSZ			; counter is length of buffer
-		mov bx, t_buffer		; get address of buffer
-		mov di, bx			; destination is buffer
-		.cl:
-			mov [di], byte 0	; zero out
-			inc di			; increment buffer address
-			dec cx			; decrement counter
-			jne .cl			; repeat until counter is 0
-
-		mov di, bx			; reset destination to original address
+		mov di, t_buffer		; destination is buffer
+		rep stosb			; zero buffer
 
 	.do_prompt:
 		mov cx, 0			; reset counter
@@ -55,7 +48,7 @@ terminal:
 			call putc		; print carriage return
 
 			; ---- TEMPORARY ---
-			; A jump to a command parser occur here eventually
+			; a command parser will be here eventually
 			; TODO: write string tokenizer
 
 			push t_buffer		; push buffer string address
@@ -75,6 +68,7 @@ terminal:
 	mov sp, bp
 	pop bp
 	ret
+
 
 ; data
 t_msg_prompt_fmt: db '%s', 0
