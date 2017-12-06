@@ -44,8 +44,8 @@ disk_convert_status:
 	mov bp, sp
 	pusha
 
-	cmp ax, 01h			; Avoid writing "success" message
-	jl .return
+	cmp ah, 00h			; Avoid writing "success" message
+	je .return
 
 	xor cx, cx
 	mov cx, ax			; AL contains the sector count
