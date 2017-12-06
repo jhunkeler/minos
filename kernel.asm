@@ -34,6 +34,7 @@ kmain:
 	call cls		; clear console
 	push 0			; home the cursor
 	call setcursor
+	add sp, 2
 
 	push banner
 	call puts
