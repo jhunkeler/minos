@@ -215,14 +215,14 @@ disk_read:
 align 2
 drive0: dw 0
 
-msg_disk_reset: db "Drive reset successful.", CR, 0
-msg_disk_read: db "Sector read successful.", CR, 0
+msg_disk_reset: db "Drive reset successful.", ASCII_CR, 0
+msg_disk_read: db "Sector read successful.", ASCII_CR, 0
 
-error_msg_disk_reset: db "Drive reset failed!", CR, 0
-error_msg_disk_read: db "Drive read failed!", CR, 0
+error_msg_disk_reset: db "Drive reset failed!", ASCII_CR, 0
+error_msg_disk_read: db "Drive read failed!", ASCII_CR, 0
 
-disk_info_fmt: db 'HDD(%c): INT 13h Ext: %x (%x)', CR, 0
-error_msg_disk_status_fmt: db 'ERROR %x: Drive %x: %s', CR, 0
+disk_info_fmt: db 'HDD(%c): INT 13h Ext: %x (%x)', ASCII_CR, 0
+error_msg_disk_status_fmt: db 'ERROR %x: Drive %x: %s', ASCII_CR, 0
 error_msg_disk:
 	eds_success: db "Success", 0					; 00h
 	eds_invalid_command: db "Invalid command", 0
