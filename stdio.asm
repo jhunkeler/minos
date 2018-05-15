@@ -182,7 +182,7 @@ printf:
 			cmp al, '%'			; '%%' - just print the character
 			je .do_percent_escape
 
-			cmp al, 'c'			; '%c' - proccess character
+			cmp al, 'c'			; '%c' - process character
 			je .do_char
 
 			cmp al, 'd'			; '%d' - process integer
