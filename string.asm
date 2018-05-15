@@ -171,4 +171,63 @@ strncmp:
 	ret
 
 
+strtok:
+        push bp
+        mov bp, sp
+        push bx
+        push cx
+        push dx
+        push di
+        push si
+
+	xor ax, ax                      ; clear AX for delimter
+	xor cx, cx			; initialize string length counter
+	xor dx, dx			; initialize record counter
+	sub sp, 2			; reserve stack variable
+					;	final_pass = [bp - 2]
+
+        mov di, [bp + 4]                ; arg1 - null terminated string
+        mov si, [bp + 6]                ; arg2 - address of results array
+        mov al, [bp + 8]                ; arg3 - delimiter value
+        cld                             ; clear direction flag (0)
+
+        jmp .strtok_scan		; begin scan
+
+        .strtok_record_token:
+		inc dx			; increase record count
+                mov bx, di		; store address of delimiter
+                sub bx, cx		; subtract length from address
+					; to get start of string
+
+                mov [si], bx		; store start of word
+                mov [si+2], cx		; store length of word
+
+                add si, 4               ; increment array pointer
+                xor cx, cx		; reset counter
+                cmp word [bp - 2], 0	; is this the final pass?
+                jne .strtok_return	; if so, return
+					; else, fall through
+        .strtok_scan:
+		inc cx
+                scasb			; scan for delimiter in AL
+                je .strtok_record_token	; if ZF=1, store pointer
+                cmp byte [di], 0	; if null terminated, exit loop
+                jne .strtok_scan	; else continue
+
+                mov word [bp - 2], 1	; indicate final pass in progress
+                dec bx			; adjust final address for null termination
+                jmp .strtok_record_token ; process final address
+
+.strtok_return:
+	mov ax, dx	; return record count
+	pop si
+	pop di
+	pop dx
+	pop cx
+	pop bx
+
+        mov sp, bp
+        pop bp
+	ret
+
 %endif	; _STRING_ASM
