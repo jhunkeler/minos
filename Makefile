@@ -12,7 +12,7 @@ kernel.bin: kernel.asm
 	nasm -f bin -o $@ $<
 
 run: system.img
-	$(QEMU) -m 16 -fda $<
+	$(QEMU) -d guest_errors -m 16 -fda $<
 
 clean:
 	rm *.bin *.img
