@@ -7,6 +7,15 @@ terminal:
 	push bp
 	mov bp, sp
 
+	mov ax, ds
+	mov es, ax
+	sub sp, T_BUFSZ				; reserve space for tokens
+
+	xor ax, ax
+	mov cx, T_BUFSZ
+	lea di, [bp - T_BUFSZ]
+	repne stosb				; zero out token storage
+
 	.clear_buffer:
 		mov cx, T_BUFSZ			; counter is length of buffer
 		mov di, t_buffer		; destination is buffer
@@ -15,19 +24,19 @@ terminal:
 	.do_prompt:
 		mov cx, 0			; reset counter
 						; this tracks keyboard presses
-		mov al, CR
+		mov al, ASCII_CR
 		call putc			; write carriage return to console
 
 		push t_msg_prompt		; address of prompt string
 		push t_msg_prompt_fmt		; address of prompt format string
 		call printf			; print prompt to console
-		add sp, 4			; clean up stack
+		add sp, 2 * 2			; clean up stack
 
 	mov di, t_buffer			; input destination is buffer
 	.read_command:
 		call kbd_read			; get input from user
 		.update_buffer:
-			cmp al, CR
+			cmp al, ASCII_CR
 			je .flush_buffer	; if carriage return, flush buffer
 
 			cmp cx, T_BUFSZ
@@ -44,17 +53,23 @@ terminal:
 						; (di - 1) is the previous input
 			je .do_prompt		; if no input (null), start over
 
-			mov al, CR
+			mov al, ASCII_CR
 			call putc		; print carriage return
 
 			; ---- TEMPORARY ---
 			; a command parser will be here eventually
 			; TODO: write string tokenizer
 
-			push t_buffer		; push buffer string address
-			push t_buffer_fmt	; push buffer format string address
-			call printf		; write input to console
-			add sp, 4		; clean up stack
+			lea si, [bp - T_BUFSZ]
+			push ' '
+			push si
+			push t_buffer
+			call strtok
+			add sp, 2 * 3
+			;push t_buffer		; push buffer string address
+			;push t_buffer_fmt	; push buffer format string address
+			;call printf		; write input to console
+			;add sp, 2 * 2 		; clean up stack
 			; --- END TEMPORARY ---
 
 			jmp .clear_buffer	; zero out buffer / start over
