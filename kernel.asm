@@ -4,6 +4,7 @@ jmp kmain
 
 %include "constants.asm"
 %include "string.asm"
+%include "isr.asm"
 %include "disk.asm"
 %include "console.asm"
 %include "stdio.asm"
@@ -31,7 +32,11 @@ kmain:
 	xor si, si
 	xor bp, bp
 
+	mov dl, 0			; select video page 0
+	call console_set_video_page	; set video page
+
 	call cls		; clear console
+
 	push 0			; home the cursor
 	call setcursor
 	add sp, 2
@@ -45,13 +50,17 @@ kmain:
 	push ss
 	push sp
 	push ss
-	push kmain
+	push kend
 	push cs
 	push kmain
 	push cs
-	push msg_entry_point
+	push kend
+	push cs
+	push kmain
+	push cs
+	push msg_entry_point_fmt
 	call printf
-	add sp, 20
+	add sp, 2 * 11
 
 	mov cx, 0ffh - 80h
 	mov dx, 80h
@@ -63,13 +72,54 @@ kmain:
 		dec cx
 		jne .extloop
 
+
+
 .mainloop:
+	call isr_inject
 	call terminal
 
 	jmp .mainloop
 
 	cli
 	jmp $
+
+
+isr_inject:
+	push bp
+	mov bp, sp
+
+	push es
+	push ax
+	push bx
+	push bp
+
+	mov ax, 0000h		; set ES to Interrupt Vector Table
+				; (start of RAM)
+	mov es, ax
+
+	mov bp, 20h * 4		; Set vector (v = es:offset * 4))
+	lea bx, [int22]		; Load address of ISR routine
+	mov ax, cs		; Load code segment into AX
+
+	mov word [es:bp], bx	; Store address of ISR routine
+	mov word [es:bp+2], ax	; Store code segment of ISR routine
+
+	push bx
+	push ax
+	push msg_isr_fmt
+	call printf		; print injected ISR address
+	add sp, 2 * 3		; cleanup stack
+
+	pop bp
+	pop bx
+	pop ax
+	pop es
+
+	int 20h			; test new ISR
+
+	mov sp, bp
+	pop bp
+	ret
 
 
 panic:
@@ -91,18 +141,18 @@ panic:
 
 
 ; data
-banner: db "+========================+", CR
-	db "| Welcome to MINOS 0.0.1 |", CR
-	db "+========================+", CR
-	db CR, 0
+banner: db "+========================+", ASCII_CR
+	db "| Welcome to MINOS 0.0.1 |", ASCII_CR
+	db "+========================+", ASCII_CR
+	db ASCII_CR, 0
 
-msg_entry_point: db 'Kernel address:	%x:%x (%d:%d)', CR
-                 db 'Stack address :	%x:%x (%d:%d)', CR
-                 db 'Boot device   :    %x', CR, CR, 0
+msg_entry_point_fmt: db 'Kernel address:	%x:%x - %x:%x (%d:%d - %d:%d)', ASCII_CR
+                 db 'Stack address :	%x:%x (%d:%d)', ASCII_CR
+                 db 'Boot device   :    %x', ASCII_CR, ASCII_CR, 0
+msg_isr_fmt: db "ISR %x:%x", ASCII_CR, 0
 
 ; Error messages
 error_msg_panic: db "PANIC: ", 0
 
-times (512 * 20h) - 2 db 0	; Until we have a file system just reserve 32k of "free space"
-dw 0xefbe			; The "BEEF" signature is a visual "end of kernel"
-				; It has no meaning...
+kend: dw 0xefbe			; The "BEEF" signature is a visual "end of kernel"
+times (0200h * 20h) db 0	; Until we have a file system just reserve 32k
