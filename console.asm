@@ -16,7 +16,7 @@ putc:
 	jl .non_graphical
 
 	mov ah, 0ah		; BIOS - write character
-	mov bx, 00h		; video page zero
+	mov bh, [video_page]	; video page zero
 	mov cx, 01h		; repeat character N times
 	int 10h			; BIOS video service
 
@@ -44,7 +44,7 @@ console_scroll_up:
 	; scroll window up:
 	mov     ah, 06h ; scroll up function id.
 	mov     al, 1   ; lines to scroll.
-	mov     bx, 0700h  ; attribute for new lines.
+	mov     bh, 07h  ; attribute for new lines.
 	mov     cl, 0   ; upper col.
 	mov     ch, 0   ; upper row.
 	mov     dl, MAX_COLS   ; lower col.
@@ -88,19 +88,19 @@ console_driver:
 
 .do_ascii:
 	; ASCII control block
-	cmp al, SPC
+	cmp al, ASCII_SPC
 	jae .handle_SPC
 
-	cmp al, TAB
+	cmp al, ASCII_TAB
 	je .handle_TAB
 
-	cmp al, BS
+	cmp al, ASCII_BS
 	je .handle_BS
 
-	cmp al, CR
+	cmp al, ASCII_CR
 	je .handle_CR
 
-	cmp al, LF
+	cmp al, ASCII_LF
 	je .handle_LF
 
 	; etc...
@@ -129,7 +129,7 @@ console_driver:
 .skip_bs:
 	mov ah, 0ah
 	mov al, 20h
-	mov bx, 00h
+	mov bh, byte [video_page]
 	mov cx, 1
 	int 10h
 	jmp .return_noupdate
@@ -161,8 +161,7 @@ cls:
 
 	mov ah, 07h		; BIOS - scroll down
 	mov al, 00h		; lines to scroll (0 == entire screen)
-	mov bx, 0700h		; color white/black
-				; & video page zero
+	mov bh, 07h		; color white/black
 	mov cx, 0
 	mov dh, 24		; rows
 	mov dl, 79		; cols
@@ -179,7 +178,7 @@ console_cursor_getpos:
 	pusha
 
 	mov ah, 03h		; BIOS - query cursor position and size
-	mov bh, 00h		; video page zero
+	mov bh, byte [video_page]	; video page zero
 	int 10h
 
 	mov [cursor_sl_start], byte ch	; record data
@@ -198,8 +197,8 @@ console_cursor_read:
 	push ax
 	push bx
 
-	mov ah, 08h		; BIOS - read character/attr at cursor
-	mov bh, 00h		; video page zero
+	mov ah, 08h			; BIOS - read character/attr at cursor
+	mov bh, byte[video_page]	; video page
 	int 10h
 
 	mov [cursor_attr], byte ah
@@ -253,15 +252,27 @@ console_cursor_read_last:
 	ret
 
 
+console_set_video_page:
+	push bp
+	mov bp, sp
+
+	mov [video_page], dl
+	mov ah, 05h
+	mov al, [video_page]
+	int 10h
+
+	pop bp
+	ret
+
 setcursor:
 	push bp
 	mov bp, sp
 	pusha
 
-	mov ah, 02h		; BIOS - set cursor position
-	mov bh, 0		; video page zero
-	mov dx, [bp + 4]	; address of new cursor value
-	int 10h			; BIOS video service
+	mov ah, 02h			; BIOS - set cursor position
+	mov bh, byte [video_page]	; video page
+	mov dx, [bp + 4]		; address of new cursor value
+	int 10h				; BIOS video service
 
 	popa
 	mov sp, bp
@@ -270,6 +281,7 @@ setcursor:
 
 
 ; data
+video_page: db 0
 cursor_sl_start: db 0
 cursor_sl_end: db 0
 cursor_row: db 0
