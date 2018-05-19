@@ -181,10 +181,14 @@ strtok:
         push si
 
 	xor ax, ax                      ; clear AX for delimter
+	xor bx, bx
 	xor cx, cx			; initialize string length counter
 	xor dx, dx			; initialize record counter
+	xor si, si
+	xor di, di
+
 	sub sp, 2			; reserve stack variable
-					;	final_pass = [bp - 2]
+	mov word [bp - 2], 0		;	final_pass = [bp - 2]
 
         mov di, [bp + 4]                ; arg1 - null terminated string
         mov si, [bp + 6]                ; arg2 - address of results array
