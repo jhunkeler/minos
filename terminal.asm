@@ -1,28 +1,34 @@
 %ifndef _TERMINAL_ASM
 %define _TERMINAL_ASM
 
-T_BUFSZ equ 256					; maximum length of terminal input buffer
+T_BUFSZ equ 255					; maximum length of terminal input buffer
 
 terminal:
 	push bp
 	mov bp, sp
+	push ds
+	push es
 
 	mov ax, ds
 	mov es, ax
 	sub sp, T_BUFSZ				; reserve space for tokens
 
-	xor ax, ax
-	mov cx, T_BUFSZ
-	lea di, [bp - T_BUFSZ]
-	repne stosb				; zero out token storage
+	cld
 
 	.clear_buffer:
-		mov cx, T_BUFSZ			; counter is length of buffer
+		xor ax, ax
+		mov cx, T_BUFSZ / 2
+		lea di, [bp - T_BUFSZ]
+		mov dx, di
+		repne stosb				; zero out token storage
+
+		xor ax, ax
+		mov cx, T_BUFSZ	/ 2		; counter is length of buffer
 		mov di, t_buffer		; destination is buffer
-		rep stosb			; zero buffer
+		repne stosw			; zero buffer
 
 	.do_prompt:
-		mov cx, 0			; reset counter
+		xor cx, cx			; reset counter
 						; this tracks keyboard presses
 		mov al, ASCII_CR
 		call putc			; write carriage return to console
@@ -60,12 +66,16 @@ terminal:
 			; a command parser will be here eventually
 			; TODO: write string tokenizer
 
-			lea si, [bp - T_BUFSZ]
 			push ' '
-			push si
+			push dx
 			push t_buffer
 			call strtok
 			add sp, 2 * 3
+
+			push word ax
+			call printh
+			add sp, 2
+
 			;push t_buffer		; push buffer string address
 			;push t_buffer_fmt	; push buffer format string address
 			;call printf		; write input to console
@@ -80,6 +90,8 @@ terminal:
 
 	jmp .do_prompt				; start over
 
+	pop es
+	pop ds
 	mov sp, bp
 	pop bp
 	ret
