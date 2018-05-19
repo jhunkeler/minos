@@ -32,6 +32,8 @@ putc:
 
 
 console_scroll_up:
+	push bp
+	mov bp, sp
 	pusha
 	cmp dh, MAX_ROWS - 1
 	jne .no_action
@@ -52,6 +54,8 @@ console_scroll_up:
 	int     10h
 .no_action:
 	popa
+	mov sp, bp
+	pop bp
 	ret
 
 
@@ -255,12 +259,14 @@ console_cursor_read_last:
 console_set_video_page:
 	push bp
 	mov bp, sp
+	pusha
 
 	mov [video_page], dl
 	mov ah, 05h
 	mov al, [video_page]
 	int 10h
 
+	popa
 	pop bp
 	ret
 
