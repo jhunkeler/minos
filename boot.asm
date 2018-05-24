@@ -4,7 +4,7 @@ jmp start
 
 CR equ 0Dh
 LF equ 0Ah
-K_CS_ADDR equ 0080h
+K_CS_ADDR equ 0050h
 
 ; data
 drive0: dw 0
