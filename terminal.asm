@@ -30,7 +30,7 @@ terminal:
 	.do_prompt:
 		xor cx, cx			; reset counter
 						; this tracks keyboard presses
-		mov al, ASCII_CR
+		mov al, ASCII_LF
 		call putc			; write carriage return to console
 
 		push t_msg_prompt		; address of prompt string
@@ -41,8 +41,13 @@ terminal:
 	mov di, t_buffer			; input destination is buffer
 	.read_command:
 		call kbd_read			; get input from user
+
+		cmp al, ASCII_CR		; return pressed?
+		jne .update_buffer
+		mov al, ASCII_LF		; convert CR to LF
+
 		.update_buffer:
-			cmp al, ASCII_CR
+			cmp al, ASCII_LF
 			je .flush_buffer	; if carriage return, flush buffer
 
 			cmp cx, T_BUFSZ
@@ -59,12 +64,8 @@ terminal:
 						; (di - 1) is the previous input
 			je .do_prompt		; if no input (null), start over
 
-			mov al, ASCII_CR
+			mov al, ASCII_LF
 			call putc		; print carriage return
-
-			; ---- TEMPORARY ---
-			; a command parser will be here eventually
-			; TODO: write string tokenizer
 
 			push ' '
 			push dx
@@ -72,10 +73,13 @@ terminal:
 			call strtok
 			add sp, 2 * 3
 
-			push word ax
+			push ax
 			call printh
 			add sp, 2
 
+			; ---- TEMPORARY ---
+			; a command parser will be here eventually
+			; TODO: write string tokenizer
 			;push t_buffer		; push buffer string address
 			;push t_buffer_fmt	; push buffer format string address
 			;call printf		; write input to console
@@ -90,6 +94,7 @@ terminal:
 
 	jmp .do_prompt				; start over
 
+	add sp, 2
 	pop es
 	pop ds
 	mov sp, bp
