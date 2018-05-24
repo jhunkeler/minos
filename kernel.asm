@@ -16,9 +16,9 @@ kmain:
 	mov ax, cs		; get code segment
 	mov ds, ax		; set data segment
 	mov es, ax		; set extra segment
-	mov ax, 8000h
+	mov ax, 9000h
 	mov ss, ax		; set stack segment
-	mov sp, 0ffffh		; set stack pointer (~64k)
+	mov sp, 0FBFFh		; set stack pointer (~64k)
 	sti			; enable interrupts
 
 	mov [drive0], dx	; store bootloader's drive number
@@ -35,9 +35,9 @@ kmain:
 	mov dl, 0			; select video page 0
 	call console_set_video_page	; set video page
 
-	call cls		; clear console
+	call cls			; clear console
 
-	push 0			; home the cursor
+	push 0000h			; home the cursor
 	call setcursor
 	add sp, 2
 
@@ -60,24 +60,36 @@ kmain:
 	push cs
 	push msg_entry_point_fmt
 	call printf
-	add sp, 2 * 11
+	add sp, 2 * 14
 
-	mov cx, 0ffh - 80h
-	mov dx, 80h
-	.extloop:
-		push dx
-		call disk_info
+	mov dx, 0000h				; dx = diskette drive number
+	.info_diskette_loop:			; display diskette drive data
+		push dx				; load drive number (0-3)
+		call disk_info			; show info
 		add sp, 2
-		inc dx
-		dec cx
-		jne .extloop
 
+		inc dx				; next drive
+		cmp dl, 03h			; for 3 devices
+		jle .info_diskette_loop		; continue
+
+	mov dx, 0080h				; dx = drive number (128+n)
+	.info_disk_loop:			; display hard drive data
+		push dx				; load drive number (80h-81h)
+		call disk_info                  ; show info
+		add sp, 2
+
+		push dx				; next drive
+		call disk_info_ext		; show drive extensions
+		add sp, 2
+
+		inc dx				; next drive
+		cmp dx, 81h			; for 2 devices
+		jle .info_disk_loop		; continue
 
 
 .mainloop:
 	call isr_inject
 	call terminal
-
 	jmp .mainloop
 
 	cli
@@ -141,18 +153,19 @@ panic:
 
 
 ; data
-banner: db "+========================+", ASCII_CR
-	db "| Welcome to MINOS 0.0.1 |", ASCII_CR
-	db "+========================+", ASCII_CR
-	db ASCII_CR, 0
+banner: db "+========================+", ASCII_LF
+	db "| Welcome to MINOS 0.0.1 |", ASCII_LF
+	db "+========================+", ASCII_LF
+	db ASCII_LF, 0
 
-msg_entry_point_fmt: db 'Kernel address:	%x:%x - %x:%x (%d:%d - %d:%d)', ASCII_CR
-                 db 'Stack address :	%x:%x (%d:%d)', ASCII_CR
-                 db 'Boot device   :    %x', ASCII_CR, ASCII_CR, 0
-msg_isr_fmt: db "ISR %x:%x", ASCII_CR, 0
+msg_entry_point_fmt:
+	db 'Kernel address:	%x:%x - %x:%x (%d:%d - %d:%d)', ASCII_LF
+        db 'Stack address :	%x:%x (%d:%d)', ASCII_LF
+        db 'Boot device   :    %x', ASCII_LF, ASCII_LF, 0
+msg_isr_fmt: db "ISR %x:%x", ASCII_LF, 0
 
 ; Error messages
 error_msg_panic: db "PANIC: ", 0
 
 kend: dw 0xefbe			; The "BEEF" signature is a visual "end of kernel"
-times (0200h * 20h) db 0	; Until we have a file system just reserve 32k
+times (1474560-512)-($-$$) db 0	; Until we have a file system reserve 1.44MBs
