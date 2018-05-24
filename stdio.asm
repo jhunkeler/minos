@@ -55,17 +55,17 @@ printh:
 
 
 puthex:
+	push bp
+	mov bp, sp
+
 	push ax
 	push bx
 	push cx
 	push dx
+	push di
 
-	; ax is integer to print
-	ror ah, 4		; reverse hex value
-	ror al, 4
-	xchg ah, al
-
-	mov cx, 04h		; count (leading zeros)
+	xor di, di			; local stack counter
+	mov cx, 02h			; padding count (leading zeros)
 	.divide:
 		mov bx, 10h		; set divisor
 
@@ -75,37 +75,56 @@ puthex:
 		cmp dl, 10		; don't adjust values less than 10
 		jl .decimal
 		.alpha:
-			sub dl, 10		; (remainder - 10) -> align with ascii (base 10)
-			add dl, 'A'		; (remainder + 'A') -> ascii offset conversion
-			jmp .write
+			sub dl, 10	; (remainder - 10) -> align with ascii (base 10)
+			add dl, 'A'	; (remainder + 'A') -> ascii offset conversion
+			jmp .collect
 		.decimal:
-			or dl, 30h 		; remainder -> ascii
+			or dl, 30h	; remainder -> ascii
+
+	.collect:
+		push dx			; push ascii value onto stack
+		inc di			; increment stack counter
+
+		cmp ax, 0		; loop if al != 0
+		jne .divide
+
+		cmp di, cx		; only pad zeros if padding count is greater than
+					; the number of elements pushed to the stack
+		jge .write
+
+	mov dx, 30h			; store padding byte (ascii zero)
+	sub cx, di			; How many zeros will we pad?
+	.padding:
+		push dx			; push padding byte
+		inc di			; increment stack counter
+		dec cx			; decrement padding counter
+		jne .padding		; loop until CX == 0
+
 	.write:
-		dec cx
-		xchg ax, dx	   	; exchange registers to get ascii value
+		dec di			; decrement stack counter
+		dec cx			; decrement padding counter
+
+		pop ax			; pop ascii value off stack
 		call putc		; print value
-		xchg ax, dx		; restore registers
 
-		cmp al, 0		; loop if al != 0
-		jne .divide
-
-		cmp cx, 0
-		jne .divide
-
+		cmp di, 0
+		jne .write
 .return:
+	pop di
 	pop dx
 	pop cx
 	pop bx
 	pop ax
+	mov sp, bp
+	pop bp
 	ret
-
 
 putint:
 	push bp
 	mov bp, sp
 	pusha
 
-	mov cx, 05h		; count (+leading zeros)
+	mov cx, 00h		; count (+leading zeros)
 	mov di, 00h		; inner loop count
 	.divide:
 		mov bx, 0Ah		; set divisor
@@ -114,19 +133,28 @@ putint:
 		div bx			; divide by 10
 		or dl, 30h 		; remainder -> ascii
 
-		dec cx
+		;dec cx
 		inc di			; local stack counter
 		push dx
 
 		cmp al, 0		; loop if al != 0
 		jne .divide
 
-		cmp cx, 0		; no more zeros?
-		jne .divide
+		cmp di, cx		; only pad zeros if padding count is greater than
+					; the number of elements pushed to the stack
+		jge .write
+
+	mov dx, 30h			; store padding byte (ascii zero)
+	sub cx, di			; How many zeros will we pad?
+	.padding:
+		push dx			; push padding byte
+		inc di			; increment stack counter
+		dec cx			; decrement padding counter
+		jne .padding		; loop until CX == 0
 
 	.write:
 		pop ax			; pop first value of integer
-		dec di			; decrement our loop counter
+		dec di			; decrement our stack counter
 		call putc		; write character
 		cmp di, 0		; done?
 		jne .write
@@ -141,6 +169,7 @@ putint:
 printf:
 	push bp
 	mov bp, sp
+	pusha
 
 	mov di, bp		; save base pointer address
 	push di
@@ -247,6 +276,7 @@ printf:
 					; it, we're doomed; we'll roll right off the
 					; edge into oblivion.
 	pop di
+	popa
 	mov sp, bp
 	pop bp
 	ret
