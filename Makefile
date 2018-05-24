@@ -6,14 +6,16 @@ system.img: boot.bin kernel.bin
 	cat $^ > $@
 
 boot.bin: boot.asm
-	nasm -f bin -o $@ $<
+	nasm -f bin -l $@.lst -o $@ $<
 
 kernel.bin: kernel.asm
-	nasm -f bin -o $@ $<
+	nasm -f bin -l $@.lst -o $@ $<
 
 run: system.img
-	$(QEMU) -d guest_errors -m 16 -fda $<
+	$(QEMU) -d guest_errors -m 16 -hda $<
 
-clean:
-	rm *.bin *.img
 .PHONY: clean
+clean:
+	rm *.bin
+	rm *.img
+	rm *.lst
