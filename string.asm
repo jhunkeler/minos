@@ -223,6 +223,7 @@ strtok:
                 jmp .strtok_record_token ; process final address
 
 .strtok_return:
+	add sp, 2
 	mov ax, dx	; return record count
 	pop si
 	pop di
