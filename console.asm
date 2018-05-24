@@ -114,7 +114,7 @@ console_driver:
 .handle_SPC:
 	inc dl
 	cmp dl, MAX_COLS
-	jge .handle_CR
+	jge .handle_LF
 	jmp .return
 
 .handle_TAB:
@@ -140,9 +140,11 @@ console_driver:
 
 .handle_CR:
 	mov dl, 0		; set column zero
+	jmp .return
 
 .handle_LF:
 	inc dh			; increment row
+	mov dl, 0		; set column zero
 	jmp .return
 
 .return:
