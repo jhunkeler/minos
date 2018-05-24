@@ -6,12 +6,30 @@ CR equ 0Dh
 LF equ 0Ah
 K_CS_ADDR equ 0080h
 
+; data
+drive0: dw 0
+banner: db "MINOS Bootloader", CR, LF, 0
+
+; General messages
+msg_loading: db "Loading", 0
+msg_done: db "done!", CR, LF, 0
+
+; Error messages
+error_msg_panic: db "PANIC: ", 0
+error_msg_disk_reset: db "Drive reset failed!", CR, LF, 0
+error_msg_disk_read: db "Drive read failed!", CR, LF, 0
+
 start:
-	mov ax, 07c0h
+	cli
+	mov ax, 07C0h		; load bootstrap address
 	mov ds, ax		; set data segment
-	mov ax, 07e0h
-	mov ss, ax		; set stack segment
-	mov sp, 0200h		; 512 byte stack
+	mov es, ax		; set extra segment
+	mov ax, stack_end	; load address of temp stack segment
+	mov ss, ax		; set stack end
+	mov cx, 01FCh
+	sub ax, cx
+	mov sp, ax		; set stack top before boot signature
+	sti
 
 	mov [drive0], dx	; save first detected drive
 
@@ -46,8 +64,8 @@ start:
 	add sp, 2
 
 	add bx, 0200h		; increment address by 512 bytes
-	inc di			; increment sector read count
-	cmp di, 20h		; 16K (512 * 32)
+	inc di			; increment track read count
+	cmp di, 12h		; transfer 9K (512 * 18)
 	jle .loader		; keep reading
 
 	push msg_done
@@ -108,9 +126,7 @@ disk_read:
 
 	jnc .success
 
-	push dx
 	call disk_reset
-	add sp, 2
 
 	pop cx
 	pop bx
@@ -169,19 +185,7 @@ puts:
 	pop bp
 	ret
 
-
-; data
-drive0: dw 0
-banner: db "MINOS Bootloader", CR, LF, 0
-
-; General messages
-msg_loading: db "Loading", 0
-msg_done: db "done!", CR, LF, 0
-
-; Error messages
-error_msg_panic: db "PANIC: ", 0
-error_msg_disk_reset: db "Drive reset failed!", CR, LF, 0
-error_msg_disk_read: db "Drive read failed!", CR, LF, 0
+stack_end:	; address of stack end
 
 ; boot signature
 times 510-($-$$) db 0
