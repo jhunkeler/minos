@@ -30,9 +30,16 @@ printi:
 	push bp
 	mov bp, sp
 	push ax
+	push cx
+
 	mov ax, [bp + 4]
+	mov cx, 0
+	push cx
+	push word [bp + 4]    ; integer WORD
 	call putint
+	add sp, 2 * 2
 .return:
+	pop cx
 	pop ax
 	mov sp, bp
 	pop bp
@@ -43,11 +50,15 @@ printh:
 	push bp
 	mov bp, sp
 	push ax
+	push cx
 
-	mov ax, [bp + 4]    ; integer WORD
+	mov cx, 0
+	push cx
+	push word [bp + 4]    ; integer WORD
 	call puthex
-
+	add sp, 2 * 2
 .return:
+	pop cx
 	pop ax
 	mov sp, bp
 	pop bp
@@ -64,8 +75,14 @@ puthex:
 	push dx
 	push di
 
-	xor di, di			; local stack counter
-	mov cx, 02h			; padding count (leading zeros)
+	xor di, di
+	mov ax, [bp + 4]	; value to print
+	mov cx, [bp + 6]	; padding count (+leading zeros)
+
+	cmp cx, 0
+	jg .divide
+	inc cx
+
 	.divide:
 		mov bx, 10h		; set divisor
 
@@ -102,7 +119,6 @@ puthex:
 
 	.write:
 		dec di			; decrement stack counter
-		dec cx			; decrement padding counter
 
 		pop ax			; pop ascii value off stack
 		call putc		; print value
@@ -119,23 +135,26 @@ puthex:
 	pop bp
 	ret
 
+
 putint:
 	push bp
 	mov bp, sp
 	pusha
 
-	mov cx, 00h		; count (+leading zeros)
-	mov di, 00h		; inner loop count
+	mov ax, [bp + 4]	; value to print
+	mov cx, [bp + 6]	; padding count (+leading zeros)
+	mov di, 00h			; inner loop count
+
 	.divide:
 		mov bx, 0Ah		; set divisor
 
 		xor dx, dx		; clear mod
 		div bx			; divide by 10
-		or dl, 30h 		; remainder -> ascii
+		or dl, 30h		; remainder -> ascii
 
-		;dec cx
-		inc di			; local stack counter
-		push dx
+	.collect:
+		push dx			; push ascii value onto stack
+		inc di			; increment stack counter
 
 		cmp al, 0		; loop if al != 0
 		jne .divide
@@ -171,28 +190,20 @@ printf:
 	mov bp, sp
 	pusha
 
-	mov di, bp		; save base pointer address
-	push di
-
-	mov bx, [bp + 4]	; format string address
+	mov si, [bp + 4]	; source index is format string address
 	add bp, 6		; set base pointer to beginning of '...' args
 
-	; count arguments
-	std			; buffer direction 'up'
-	mov cx, 0		; set counter
-	mov si, bp		; source index is base pointer
-	.count_args:
-		lodsw		; load word at es:si
-		add cx, 1	; increase arg count
-		cmp ax, 0	; here we're looking for a "natural null terminator"
-				; on the stack
-		jne .count_args
+	xor cx, cx
 
 	cld					; clear direction flag
-	mov si, bx				; source index is format string
 	.main_string:
+		xor ax, ax
 		lodsb				; load byte in format string
 						; BEGIN READING FORMAT STRING
+
+		cmp al, '\'			; trigger control code expansion
+		je .parse_control
+
 		cmp al, '%'			; trigger parser on '%' symbol
 		je .parse_fmt
 
@@ -204,10 +215,41 @@ printf:
 
 		jmp .main_string		; repeat
 
+		.parse_control:
+			lodsb				; get next byte
+
+			cmp al, 'n'
+			je .do_LF
+
+			cmp al, 'r'
+			je .do_CR
+
+			jmp .do_default
+
+			.do_LF:
+				mov ax, ASCII_CR
+				call putc
+
+				mov ax, ASCII_LF
+				call putc
+				jmp .main_string
+
+			.do_CR:
+				mov ax, ASCII_CR
+				call putc
+				jmp .main_string
+
 		.parse_fmt:
 			lodsb				; get next byte
-			; switch(formatter)
-							; [for example]
+
+			mov cx, ax			; store incoming byte into CX
+			sub cx, 30h			; subtract '0' from CX
+			cmp cx, 9			; is ascii number?
+			jbe .do_width_modifier		; then, handle width
+
+			xor cx, cx
+
+		.parse_fmt_post_width:
 			cmp al, '%'			; '%%' - just print the character
 			je .do_percent_escape
 
@@ -222,6 +264,9 @@ printf:
 
 			cmp al, 's'			; '%s' - process string
 			je .do_string
+
+			cmp al, 'p'
+			je .do_pointer
 
 			jmp .do_default			; Matched nothing, so handle it
 
@@ -246,12 +291,18 @@ printf:
 
 			.do_hex:
 				mov ax, [bp]
+				push cx
+				push ax
 				call puthex
+				add sp, 2 * 2
 				jmp .parse_fmt_done
 
 			.do_int:
 				mov ax, [bp]
+				push cx
+				push ax
 				call putint
+				add sp, 2 * 2
 				jmp .parse_fmt_done
 
 			.do_string:
@@ -260,6 +311,17 @@ printf:
 				call puts
 				add sp, 2
 				jmp .parse_fmt_done
+
+			.do_pointer:
+				push cx
+				push word [bp]
+				call puthex
+				add sp, 2 * 2
+				jmp .parse_fmt_done
+
+			.do_width_modifier:
+				lodsb
+				jmp .parse_fmt_post_width
 
 			.do_default:
 				; nothing found
@@ -270,16 +332,9 @@ printf:
 		jmp .main_string	; keep reading the format string
 
 .finalize:
-	mov bp, di			; restore original base pointer address.
-					; this is pretty dangerous actually. if
-					; a procedure modifies DI without restoring
-					; it, we're doomed; we'll roll right off the
-					; edge into oblivion.
-	pop di
-	popa
+	popa				; restore all registers
 	mov sp, bp
 	pop bp
 	ret
-
 
 %endif
