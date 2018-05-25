@@ -42,7 +42,7 @@ kmain:
 	add sp, 2
 
 	push banner
-	call puts
+	call printf
 	add sp, 2
 
 	push word [drive0]
@@ -85,7 +85,6 @@ kmain:
 		inc dx				; next drive
 		cmp dx, 81h			; for 2 devices
 		jle .info_disk_loop		; continue
-
 
 .mainloop:
 	call isr_inject
@@ -153,16 +152,16 @@ panic:
 
 
 ; data
-banner: db "+========================+", ASCII_LF
-	db "| Welcome to MINOS 0.0.1 |", ASCII_LF
-	db "+========================+", ASCII_LF
-	db ASCII_LF, 0
+banner: db "+========================+\n"
+	db "| Welcome to MINOS 0.0.1 |\n"
+	db "+========================+\n"
+	db "\n", 0
 
 msg_entry_point_fmt:
-	db 'Kernel address:	%x:%x - %x:%x (%d:%d - %d:%d)', ASCII_LF
-        db 'Stack address :	%x:%x (%d:%d)', ASCII_LF
-        db 'Boot device   :    %x', ASCII_LF, ASCII_LF, 0
-msg_isr_fmt: db "ISR %x:%x", ASCII_LF, 0
+	db 'Kernel address:	%5x:%4x - %5x:%4x (%d:%d - %d:%d)\n'
+        db 'Stack address :	%5x:%4x (%d:%d)\n'
+        db 'Boot device   :    %2x\n\n', 0
+msg_isr_fmt: db "ISR %5x:%4x\n", 0
 
 ; Error messages
 error_msg_panic: db "PANIC: ", 0
