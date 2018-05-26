@@ -193,7 +193,7 @@ printf:
 	mov si, [bp + 4]	; source index is format string address
 	add bp, 6		; set base pointer to beginning of '...' args
 
-	xor cx, cx
+	xor cx, cx		; initialize width modifier count
 
 	cld					; clear direction flag
 	.main_string:
@@ -207,35 +207,35 @@ printf:
 		cmp al, '%'			; trigger parser on '%' symbol
 		je .parse_fmt
 
-		cmp al, 0			; if at end of format string
-		je .finalize			; return
+		cmp al, 0			; if we are at the end of format string
+		je .return			; then we are done printing
 
 		call putc			; write character
 						; when character is not a format specifier
 
-		jmp .main_string		; repeat
+		jmp .main_string		; read until the end of the string
 
 		.parse_control:
 			lodsb				; get next byte
 
-			cmp al, 'n'
+			cmp al, 'n'			; new line
 			je .do_LF
 
-			cmp al, 'r'
+			cmp al, 'r'			; carriage return
 			je .do_CR
 
 			jmp .do_default
 
 			.do_LF:
-				mov ax, ASCII_CR
+				mov ax, ASCII_CR	; home the line
 				call putc
 
-				mov ax, ASCII_LF
+				mov ax, ASCII_LF	; increment line
 				call putc
 				jmp .main_string
 
 			.do_CR:
-				mov ax, ASCII_CR
+				mov ax, ASCII_CR	; home the line
 				call putc
 				jmp .main_string
 
@@ -245,9 +245,9 @@ printf:
 			mov cx, ax			; store incoming byte into CX
 			sub cx, 30h			; subtract '0' from CX
 			cmp cx, 9			; is ascii number?
-			jbe .do_width_modifier		; then, handle width
+			jbe .do_width_modifier		; then, use CX as format width
 
-			xor cx, cx
+			xor cx, cx			; else, clear format width counter
 
 		.parse_fmt_post_width:
 			cmp al, '%'			; '%%' - just print the character
@@ -265,7 +265,7 @@ printf:
 			cmp al, 's'			; '%s' - process string
 			je .do_string
 
-			cmp al, 'p'
+			cmp al, 'p'			; '%p' - process pointer
 			je .do_pointer
 
 			jmp .do_default			; Matched nothing, so handle it
@@ -320,7 +320,9 @@ printf:
 				jmp .parse_fmt_done
 
 			.do_width_modifier:
-				lodsb
+				lodsb	; get next byte (hopefully a format char)
+					; and jump back into format parser to finish
+					; things up
 				jmp .parse_fmt_post_width
 
 			.do_default:
@@ -331,7 +333,7 @@ printf:
 					; <<< these are our function arguments >>>
 		jmp .main_string	; keep reading the format string
 
-.finalize:
+.return:
 	popa				; restore all registers
 	mov sp, bp
 	pop bp
