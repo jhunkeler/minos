@@ -70,94 +70,94 @@ console_driver:
 
 	mov ax, [bp + 4]
 
-.do_fn:
-.do_scancode:
-	cmp al, 00h			; when AL is 00h, check scan-code
-	jne .do_ascii
+	.do_fn:
+	.do_scancode:
+		cmp al, 00h			; when AL is 00h, check scan-code
+		jne .do_ascii
 
-	cmp ah, SC_ARROW_LEFT
-	je .handle_sc_arrow_left
+		cmp ah, SC_ARROW_LEFT
+		je .handle_sc_arrow_left
 
-	cmp ah, SC_ARROW_RIGHT
-	je .handle_sc_arrow_right
-
-
-.handle_sc_arrow_left:
-	dec dl
-	jmp .return
-
-.handle_sc_arrow_right:
-	inc dl
-	jmp .return
-
-.do_ascii:
-	; ASCII control block
-	cmp al, ASCII_SPC
-	jae .handle_SPC
-
-	cmp al, ASCII_TAB
-	je .handle_TAB
-
-	cmp al, ASCII_BS
-	je .handle_BS
-
-	cmp al, ASCII_CR
-	je .handle_CR
-
-	cmp al, ASCII_LF
-	je .handle_LF
-
-	; etc...
-	jmp .return
+		cmp ah, SC_ARROW_RIGHT
+		je .handle_sc_arrow_right
 
 
-.handle_SPC:
-	inc dl
-	cmp dl, MAX_COLS
-	jge .handle_LF
-	jmp .return
+	.handle_sc_arrow_left:
+		dec dl
+		jmp .return
 
-.handle_TAB:
-	add dl, 4
-	jmp .return
+	.handle_sc_arrow_right:
+		inc dl
+		jmp .return
 
-.handle_BS:
-	dec dl
-	cmp dl, 0
-	jl .skip_bs
+	.do_ascii:
+		; ASCII control block
+		cmp al, ASCII_SPC
+		jae .handle_SPC
 
-	push dx
-	call setcursor
-	add sp, 2
+		cmp al, ASCII_TAB
+		je .handle_TAB
 
-.skip_bs:
-	mov ah, 0ah
-	mov al, 20h
-	mov bh, byte [video_page]
-	mov cx, 1
-	int 10h
-	jmp .return_noupdate
+		cmp al, ASCII_BS
+		je .handle_BS
 
-.handle_CR:
-	mov dl, 0		; set column zero
-	jmp .return
+		cmp al, ASCII_CR
+		je .handle_CR
 
-.handle_LF:
-	inc dh			; increment row
-	mov dl, 0		; set column zero
-	jmp .return
+		cmp al, ASCII_LF
+		je .handle_LF
 
-.return:
-	push dx
-	call setcursor
-	add sp, 2
+		; etc...
+		jmp .return
 
-.return_noupdate:
-	call console_scroll_up
-	popa
-	mov sp, bp
-	pop bp
-	ret
+
+	.handle_SPC:
+		inc dl
+		cmp dl, MAX_COLS
+		jge .handle_LF
+		jmp .return
+
+	.handle_TAB:
+		add dl, 4
+		jmp .return
+
+	.handle_BS:
+		dec dl
+		cmp dl, 0
+		jl .skip_bs
+
+		push dx
+		call setcursor
+		add sp, 2
+
+	.skip_bs:
+		mov ah, 0ah
+		mov al, 20h
+		mov bh, byte [video_page]
+		mov cx, 1
+		int 10h
+		jmp .return_noupdate
+
+	.handle_CR:
+		mov dl, 0		; set column zero
+		jmp .return
+
+	.handle_LF:
+		inc dh			; increment row
+		mov dl, 0		; set column zero
+		jmp .return
+
+	.return:
+		push dx
+		call setcursor
+		add sp, 2
+
+	.return_noupdate:
+		call console_scroll_up
+		popa
+		mov sp, bp
+		pop bp
+		ret
 
 
 cls:
