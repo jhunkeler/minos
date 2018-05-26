@@ -256,8 +256,14 @@ printf:
 			cmp al, 'c'			; '%c' - process character
 			je .do_char
 
-			cmp al, 'd'			; '%d' - process integer
+			cmp al, 'd'			; '%d' - process signed int
 			je .do_int
+
+			cmp al, 'i'			; '%i' - process signed int
+			je .do_int
+
+			cmp al, 'u'			; '%u' - process unsigned int
+			je .do_uint
 
 			cmp al, 'x'			; '%x' - process hexadecimal
 			je .do_hex
@@ -298,6 +304,7 @@ printf:
 				jmp .parse_fmt_done
 
 			.do_int:
+			.do_uint:
 				mov ax, [bp]
 				push cx
 				push ax
