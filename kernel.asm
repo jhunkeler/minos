@@ -3,6 +3,7 @@ bits 16
 jmp kmain
 
 %include "constants.asm"
+%include "types.asm"
 %include "string.asm"
 %include "isr.asm"
 %include "disk.asm"
