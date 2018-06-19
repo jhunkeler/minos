@@ -61,29 +61,22 @@ memcpy:
 
 strlen:
 	; Determine length of null terminated string
-	; NOTE: 64k limit imposed
-	push bp			; setup stack frame
-	mov bp, sp		; ...
+	push bp                 ; setup stack frame
+	mov bp, sp              ; ...
 	push cx
 	push si
 
-	xor cx, cx		; cx is counter
-	xor ax, ax		; ax is return value
-	mov si, [bp + 2]	; string address
+	xor cx, cx              ; cx is counter
+	xor ax, ax              ; ax is return value
+	mov si, [bp + 4]        ; string address
 .loop:
-	lodsb			; load byte from ES:SI into AL
-	cmp al, 0		; zero?
-	je .return		; if so, we're done
-	inc cx			; if not, keep going
-	jc .crash		; if we roll over CX the carry flag will be set (that's bad)
-
+	lodsb                   ; load byte from ES:SI into AL
+	cmp al, 0               ; zero?
+	je .return              ; if so, we're done
+	inc cx                  ; if not, keep going
 	jmp .loop
 
-.crash:
-	stc			; force carry flag on failure
-
 .return:
-	clc
 	mov ax, cx
 	pop si
 	pop cx
@@ -170,69 +163,88 @@ strncmp:
 	pop bp
 	ret
 
-
 strtok:
-        push bp
-        mov bp, sp
-        push bx
-        push cx
-        push dx
-        push di
-        push si
+	push bp
+	mov bp, sp
 
-	xor ax, ax                      ; clear AX for delimter
-	xor bx, bx
-	xor cx, cx			; initialize string length counter
-	xor dx, dx			; initialize record counter
-	xor si, si
-	xor di, di
+	push bx				; save GPRs
+	push cx
+	push dx
+	push di
+	push si
 
-	sub sp, 2			; reserve stack variable
-	mov word [bp - 2], 0		;	final_pass = [bp - 2]
+	xor ax, ax			; use: for delimter (LSB)
+	xor bx, bx			; use: base address for effective address calculations
+	xor cx, cx			; use: input string length counter
+	xor dx, dx			; use: temp for string comparison
+	xor si, si			; use: token array
+	xor di, di			; use: input string
 
-        mov di, [bp + 4]                ; arg1 - null terminated string
-        mov si, [bp + 6]                ; arg2 - address of results array
-        mov al, [bp + 8]                ; arg3 - delimiter value
-        cld                             ; clear direction flag (0)
+	mov di, [bp + 4]		; arg1 - input string (null terminated)
+	mov si, [bp + 6]		; arg2 - address of token array
+	mov al, [bp + 8]		; arg3 - delimter value
 
-        jmp .strtok_scan		; begin scan
+	cld				; clear direction flag
 
-        .strtok_record_token:
-		inc dx			; increase record count
-                mov bx, di		; store address of delimiter
-                sub bx, cx		; subtract length from address
-					; to get start of string
+	.find_first:
+		mov dl, byte [di]	; Load byte from input string
+		cmp dl, al		; is it the delimiter?
+		jne .calculate_length	; if not, calculate length of string at this address
+		inc di			; else, scan next byte
+		jmp .find_first
 
-                mov [si], bx		; store start of word
-                mov [si+2], cx		; store length of word
+	.calculate_length:
+		push ax			; save delimiter
+		push di			; get length of null terminated string
+		call strlen
+		add sp, 2
+		mov cx, ax		; count is return value
+		pop ax			; restore delimiter
 
-                add si, 4               ; increment array pointer
-                xor cx, cx		; reset counter
-                cmp word [bp - 2], 0	; is this the final pass?
-                jne .strtok_return	; if so, return
-					; else, fall through
-        .strtok_scan:
-		inc cx
-                scasb			; scan for delimiter in AL
-                je .strtok_record_token	; if ZF=1, store pointer
-                cmp byte [di], 0	; if null terminated, exit loop
-                jne .strtok_scan	; else continue
+		lea bx, [di]		; load initial address for _no_adjust
+		jmp .strtok_record_no_adjust
 
-                mov word [bp - 2], 1	; indicate final pass in progress
-                dec bx			; adjust final address for null termination
-                jmp .strtok_record_token ; process final address
+
+	.strtok_record_eos:
+		mov byte [di], 0	; Null terminate token
+
+	.strtok_record:
+		lea bx, [di + 1]	; The address following the null terminated token
+					; points to our new token address
+
+	.strtok_record_no_adjust:
+		mov [si], bx		; store address in results array
+		add si, 2		; increment results array by one WORD
+		inc di			; increment input string
+		dec cx			; decrement input string length counter
+
+	.strtok_scan:
+		mov dl, byte [di]	; load byte from input string
+		cmp dl, 0		; is it the end of the string?
+		je .strtok_return
+
+		cmp dl, al		; is this the delimiter?
+		je .strtok_record_eos	; if yes, record the address
+
+		dec cx			; decrement input string length counter
+		inc di			; increment input string
+		jmp .strtok_scan	; loop until scanning is done
+
+	cmp cx, 0			; if the counter is not zero there's more to parse
+	jne .strtok_record		; loop until token parsing is done
+
 
 .strtok_return:
-	add sp, 2
-	mov ax, dx	; return record count
-	pop si
+	mov ax, [bp + 6]		; return token array
+
+	pop si				; restore GPRs
 	pop di
 	pop dx
 	pop cx
 	pop bx
 
-        mov sp, bp
-        pop bp
+	mov sp, bp
+	pop bp
 	ret
 
 %endif	; _STRING_ASM
