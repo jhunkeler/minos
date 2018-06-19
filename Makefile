@@ -6,10 +6,10 @@ system.img: boot.bin kernel.bin
 	cat $^ > $@
 
 boot.bin: boot.asm
-	nasm -f bin -l $@.lst -o $@ $<
+	nasm -g -f bin -l $@.lst -o $@ $<
 
 kernel.bin: kernel.asm
-	nasm -f bin -l $@.lst -o $@ $<
+	nasm -g -f bin -l $@.lst -o $@ $<
 
 run: system.img
 	$(QEMU) -d guest_errors -m 16 -hda $<
