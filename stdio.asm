@@ -218,6 +218,9 @@ printf:
 		.parse_control:
 			lodsb				; get next byte
 
+			cmp al, 't'			; TAB
+			je .do_TAB
+
 			cmp al, 'n'			; new line
 			je .do_LF
 
@@ -225,6 +228,11 @@ printf:
 			je .do_CR
 
 			jmp .do_default
+
+			.do_TAB:
+				mov ax, ASCII_TAB
+				call putc
+				jmp .main_string
 
 			.do_LF:
 				mov ax, ASCII_CR	; home the line
