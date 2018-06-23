@@ -164,21 +164,23 @@ strncmp:
 	ret
 
 strtok:
+	%define .token_count [bp - 2]
 	push bp
 	mov bp, sp
 
+	sub sp, 2			; use: .token_count
+
 	push bx				; save GPRs
-	push cx
 	push dx
 	push di
 	push si
 
-	xor ax, ax			; use: for delimter (LSB)
-	xor bx, bx			; use: base address for effective address calculations
+	xor ax, ax			; use: hold delimiter (LSB of AX)
+	xor bx, bx			; use: effective address calculations
 	xor cx, cx			; use: input string length counter
 	xor dx, dx			; use: temp for string comparison
-	xor si, si			; use: token array
-	xor di, di			; use: input string
+	xor si, si			; use: token array address
+	xor di, di			; use: input string address
 
 	mov di, [bp + 4]		; arg1 - input string (null terminated)
 	mov si, [bp + 6]		; arg2 - address of token array
@@ -213,6 +215,7 @@ strtok:
 					; points to our new token address
 
 	.strtok_record_no_adjust:
+		inc word .token_count
 		mov [si], bx		; store address in results array
 		add si, 2		; increment results array by one WORD
 		inc di			; increment input string
@@ -236,13 +239,14 @@ strtok:
 
 .strtok_return:
 	mov ax, [bp + 6]		; return token array
+	mov cx, .token_count		; return token count
 
 	pop si				; restore GPRs
 	pop di
 	pop dx
-	pop cx
 	pop bx
 
+	add sp, 2
 	mov sp, bp
 	pop bp
 	ret
