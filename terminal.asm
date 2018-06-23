@@ -10,6 +10,8 @@ terminal:
 	push bp
 	mov bp, sp
 
+	mov byte [terminal_exit], 0
+
 	mov ax, ds
 	mov es, ax
 	sub sp, 2				; variable for buffer start address
@@ -76,9 +78,13 @@ terminal:
 			call strtok		; tokenize
 			add sp, 2 * 3
 
+			push cx				; push token count
 			push ax				; push token array
 			call terminal_check_input	; parse terminal input
 			add sp, 2 * 1
+
+			cmp byte [terminal_exit], 0
+			jne .return
 
 			jmp .clear_buffer	; zero out buffer / start over
 
@@ -86,15 +92,15 @@ terminal:
 		call putc
 		jmp .read_command		; print input to screen as we type
 
-	jmp .do_prompt				; start over
-
-	add sp, 2
-	mov sp, bp
-	pop bp
-	ret
+	.return:
+		add sp, 2
+		mov sp, bp
+		pop bp
+		ret
 
 
 terminal_check_input:
+	%define .token_count [bp + 6]
 	%define .input_len [bp - 2]
 	%define .scan_count [bp - 4]
 	%define .compare_count [bp - 6]
@@ -156,7 +162,6 @@ terminal_check_input:
 		cmp ax, cx
 		jne .compare_prefail
 
-		;sub ax, 1			; Modify strlen return value (+1 null terminator)
 		mov .compare_count, ax		; Store return value of strlen in counter
 		xor ax, ax
 		xor dx, dx
@@ -177,15 +182,18 @@ terminal_check_input:
 			jmp .compare		; ... continue
 
 		.compare_fail:
-			inc word .scan_count		; Increment builtin identifier string attempt count
+			inc word .scan_count		; Increment builtin identifier
+							; string attempt count
 			inc di
-			add di, word .compare_count	; Load the offset of the next builtin identifier
+			add di, word .compare_count	; Load the offset of the next
+							; builtin identifier
 			jmp .scan_builtins		; Continue scanning
 
 		.compare_prefail:
 			inc word .scan_count
 			inc ax				; adjust for null terminator
-			add di, ax			; Load the offset of the next builtin identifier
+			add di, ax			; Load the offset of the next
+							; builtin identifier
 			jmp .scan_builtins
 
 
@@ -193,12 +201,27 @@ terminal_check_input:
 		mov bx, t_builtins_fn		; Load address of function pointer array
 		mov cx, word .scan_count	; Load offset count
 		shl cx, 1			; Multiply offset count by 2 (next WORD)
-		add bx, cx			; Add offset to address of function pointer array
+		add bx, cx			; Add offset to address of function
+						; pointer array
 
-		mov si, .input_baseaddr
-		push si				; address of next token
+	.execute:
+		; Call builtin command with arguments
+		mov si, .input_baseaddr		; argv - tokenized input string
+		mov cx, .token_count		; argc - token count
+
+		add si, 2			; argv offset is next token
+		dec cx				; argc minus one token
+
+		pushf				; save flags
+		pusha				; save registers
+
+		push si
+		push cx
 		call word [bx]			; Execute builtin command
-		add sp, 2 * 1
+		add sp, 2 * 2
+
+		popa				; restore registers
+		popf				; restore flags
 
 	.scan_no_match:
 		popa
@@ -213,5 +236,6 @@ t_msg_prompt_fmt: db '%s', 0
 t_msg_prompt: db '$ ', 0
 t_buffer_fmt: db '%s', 0
 t_buffer: times T_BUFSZ db 0
+terminal_exit: db 0
 
 %endif
