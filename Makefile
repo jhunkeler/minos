@@ -1,4 +1,5 @@
 QEMU=qemu-system-i386
+MEM=16
 
 all: system.img
 
@@ -12,7 +13,7 @@ kernel.bin: kernel.asm
 	nasm -g -f bin -l $@.lst -o $@ $<
 
 run: system.img
-	$(QEMU) -d guest_errors -m 16 -hda $<
+	$(QEMU) -d guest_errors -m $(MEM) -hda $<
 
 .PHONY: clean
 clean:
