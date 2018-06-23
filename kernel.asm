@@ -87,8 +87,10 @@ kmain:
 		cmp dx, 81h			; for 2 devices
 		jle .info_disk_loop		; continue
 
-.mainloop:
+.preload:
 	call isr_inject
+
+.mainloop:
 	call terminal
 	jmp .mainloop
 
