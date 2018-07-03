@@ -1,6 +1,7 @@
 %ifndef _CONSTANTS_ASM
 %define _CONSTANTS_ASM
 
+VIDEO_RAM equ 0b800h
 MAX_ROWS equ 25
 MAX_COLS equ 80
 LENGTH_ROW equ 0A0h	; NOTE: length in bytes (80 * 2 = 160)

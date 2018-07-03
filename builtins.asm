@@ -2,6 +2,7 @@
 %define _BUILTINS_ASM
 
 %include "builtin_clear.asm"
+%include "builtin_draw.asm"
 %include "builtin_echo.asm"
 %include "builtin_exit.asm"
 %include "builtin_free.asm"
@@ -11,6 +12,7 @@
 
 t_builtins_fn:
 	dw builtin_clear
+	dw builtin_draw
 	dw builtin_echo
 	dw builtin_exit
 	dw builtin_free
@@ -21,6 +23,7 @@ t_builtins_fn:
 
 t_builtins_str:
 	.clear: db 'clear', 0
+	.draw: db 'draw', 0
 	.echo: db 'echo', 0
 	.exit: db 'exit', 0
 	.free: db 'free', 0
