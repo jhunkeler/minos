@@ -88,6 +88,14 @@ kmain:
 		jle .info_disk_loop		; continue
 
 .preload:
+	push ISR_TEST
+	push int20
+	call isr_inject
+
+	int 20h					; test routine
+
+	push ISR_MINOS
+	push int21
 	call isr_inject
 
 .mainloop:
@@ -105,31 +113,40 @@ isr_inject:
 	push es
 	push ax
 	push bx
-	push bp
+	push cx
+	push di
+	push ds
 
-	mov ax, 0000h		; set ES to Interrupt Vector Table
+	mov ax, 0000h		; set DS/ES to Interrupt Vector Table
 				; (start of RAM)
 	mov es, ax
+	mov ds, ax
 
-	mov bp, 20h * 4		; Set vector (v = es:offset * 4))
-	lea bx, [int22]		; Load address of ISR routine
+	;mov bp, 20h * 4		; Set vector (v = es:offset * 4))
+	;lea bx, [int22]		; Load address of ISR routine
+	mov bx, [bp + 4]		; ISR routine
+	mov di, [bp + 6]		; IVT offset
+	shl di, 2			; IVT * 4
+
 	mov ax, cs		; Load code segment into AX
+	mov word [ds:di], bx	; Store address of ISR routine
+	mov word [ds:di+2], ax	; Store code segment of ISR routine
 
-	mov word [es:bp], bx	; Store address of ISR routine
-	mov word [es:bp+2], ax	; Store code segment of ISR routine
-
+	pop ds			; Restore DS so we can print
 	push bx
 	push ax
+	push word [bp + 6]
 	push msg_isr_fmt
 	call printf		; print injected ISR address
-	add sp, 2 * 3		; cleanup stack
+	add sp, 2 * 4		; cleanup stack
 
-	pop bp
+	pop di
+	pop cx
 	pop bx
 	pop ax
 	pop es
 
-	int 20h			; test new ISR
+	;int 20h			; test new ISR
 
 	mov sp, bp
 	pop bp
@@ -164,7 +181,7 @@ msg_entry_point_fmt:
 	db 'Kernel address:	%5x:%4x - %5x:%4x (%d:%d - %d:%d)\n'
         db 'Stack address :	%5x:%4x (%d:%d)\n'
         db 'Boot device   :    %2x\n\n', 0
-msg_isr_fmt: db "ISR %5x:%4x\n", 0
+msg_isr_fmt: db "ISR %2xh, %5x:%4x\n", 0
 
 ; Error messages
 error_msg_panic: db "PANIC: ", 0

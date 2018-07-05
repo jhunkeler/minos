@@ -1,5 +1,22 @@
 int21:
-	nop
+	cmp al, .fn_table_size
+	jg .return
+
+	push bx
+	push di
+	movsx bx, al
+	mov di, .fn_table
+	call [di+bx]
+	pop di
+	pop bx
+
+	.return:
+		iret
+
+	.fn_table:
+		dw memset
+		dw memcpy
+	.fn_table_size dw $-.fn_table
 int22:
 	nop
 int20:
